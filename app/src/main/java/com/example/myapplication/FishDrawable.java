@@ -56,9 +56,9 @@ public class FishDrawable extends Drawable {
         mPaint.setAntiAlias(true);//抗锯齿
         mPaint.setDither(true);//防抖
         middlePoint = new PointF(4.19F* HEAD_RADIUS,4.19F*HEAD_RADIUS);
-        ValueAnimator valueAnimator = ValueAnimator.ofFloat(-1, 1);
-        valueAnimator.setDuration(1000);
-        valueAnimator.setRepeatMode(ValueAnimator.REVERSE);
+        ValueAnimator valueAnimator = ValueAnimator.ofFloat(0, 1200f);
+        valueAnimator.setDuration(5*1000);
+        valueAnimator.setRepeatMode(ValueAnimator.RESTART);
         valueAnimator.setRepeatCount(ValueAnimator.INFINITE);
         valueAnimator.setInterpolator(new LinearInterpolator());
         valueAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
@@ -73,7 +73,10 @@ public class FishDrawable extends Drawable {
 
     @Override
     public void draw(@NonNull Canvas canvas) {
-        float fishAngle = fishMainAngle + currentValue *10;
+
+        float fishAngle = (float) (fishMainAngle + Math.sin(Math.toRadians(currentValue* 1.2)) * 4);
+
+
         //绘制鱼头
         PointF headPoint = calculatePoint(middlePoint,BODY_LENGTH/2 ,fishAngle);
         canvas.drawCircle(headPoint.x ,headPoint.y,HEAD_RADIUS,mPaint);
@@ -89,17 +92,18 @@ public class FishDrawable extends Drawable {
         //身体的底部的中心点
         PointF bodyBottomCenterPoint = calculatePoint(headPoint , BODY_LENGTH, fishAngle - 180);
         //节肢1
-        makeSegment(canvas,bodyBottomCenterPoint,BIG_CIRCLE_RADIUS,MIDDLE_CIRCLE_RADIUS ,FIND_MIDDLE_CIRCLE_LENGTH,
+        PointF middleCircleCenterPoint= makeSegment(canvas,bodyBottomCenterPoint,BIG_CIRCLE_RADIUS,MIDDLE_CIRCLE_RADIUS ,FIND_MIDDLE_CIRCLE_LENGTH,
                 fishAngle,true);
 
-        PointF middleCircleCenterPoint = calculatePoint(bodyBottomCenterPoint , FIND_MIDDLE_CIRCLE_LENGTH, fishAngle - 180);
+//        PointF middleCircleCenterPoint = calculatePoint(bodyBottomCenterPoint , FIND_MIDDLE_CIRCLE_LENGTH, fishAngle - 180);
         //节肢2
         makeSegment(canvas,middleCircleCenterPoint,MIDDLE_CIRCLE_RADIUS,SMALL_CIRCLE_RADIUS ,FIND_SMALL_CIRCLE_LENGTH,
                 fishAngle,false);
+        float findEdgeLength = (float) Math.abs(Math.sin(Math.toRadians(currentValue*1.5))* BIG_CIRCLE_RADIUS);
         //绘制大三角形
-        makeTriangle(canvas ,middleCircleCenterPoint,FIND_TRIANGLE_LENGTH,BIG_CIRCLE_RADIUS,fishAngle);
+        makeTriangle(canvas ,middleCircleCenterPoint,FIND_TRIANGLE_LENGTH,findEdgeLength,fishAngle);
         //绘制小三角形
-        makeTriangle(canvas ,middleCircleCenterPoint,FIND_TRIANGLE_LENGTH -10,BIG_CIRCLE_RADIUS -20,fishAngle);
+        makeTriangle(canvas ,middleCircleCenterPoint,FIND_TRIANGLE_LENGTH -10,findEdgeLength -20,fishAngle);
 
         //画身体
         makeBody(canvas ,headPoint,bodyBottomCenterPoint,fishAngle);
@@ -125,19 +129,21 @@ public class FishDrawable extends Drawable {
     }
 
     /**
-     *
+     *  //画三角形
      * @param startPoint
      * @param findCenterLength 顶点到底部的垂直线长
      * @param findEdgeLength 底部一半
      */
     private void makeTriangle(Canvas canvas,PointF startPoint,float findCenterLength, float findEdgeLength,float fishAngle){
 
+        //三角形鱼尾的摆动角度需要跟着节肢2走
+        float triangleAngle = (float) (fishAngle + Math.sin(Math.toRadians(currentValue * 1.5))*35);
         //底部中心点的坐标
-        PointF centerPoint = calculatePoint(startPoint , findCenterLength , fishAngle -180);
+        PointF centerPoint = calculatePoint(startPoint , findCenterLength , triangleAngle -180);
 
         //三角形底部两个点
-        PointF leftPoint = calculatePoint(centerPoint , findEdgeLength , fishAngle +90);
-        PointF rightPoint = calculatePoint(centerPoint , findEdgeLength , fishAngle -90);
+        PointF leftPoint = calculatePoint(centerPoint , findEdgeLength , triangleAngle +90);
+        PointF rightPoint = calculatePoint(centerPoint , findEdgeLength , triangleAngle -90);
 
         mPath.reset();
         mPath.moveTo(startPoint.x, startPoint.y);
@@ -155,17 +161,27 @@ public class FishDrawable extends Drawable {
      * @param findSmallCircleLength 寻找梯形小圆的线长
      * @param hasBigCircle 是否有大圆
      */
-    private void makeSegment(Canvas canvas, PointF bottomCenterPint, float bigRadius,
+    private PointF makeSegment(Canvas canvas, PointF bottomCenterPint, float bigRadius,
                              float smallRadius, float findSmallCircleLength,float fishAngle,
                              boolean hasBigCircle){
+        //节肢摆动的角度
+
+        float segmentAngle;
+        if (hasBigCircle){
+            segmentAngle = (float) (fishAngle + Math.cos(Math.toRadians(currentValue * 1.5))*15);
+        }else{
+            segmentAngle = (float) (fishAngle + Math.sin(Math.toRadians(currentValue * 1.5))*35);
+        }
+
+
         //梯形上底的中心点（短边）
-        PointF upperCenterPoint = calculatePoint(bottomCenterPint, findSmallCircleLength ,fishAngle - 180);
+        PointF upperCenterPoint = calculatePoint(bottomCenterPint, findSmallCircleLength ,segmentAngle - 180);
 
         //梯形的四个顶点
-        PointF bottomLeftPoint = calculatePoint(bottomCenterPint, bigRadius ,fishAngle + 90);
-        PointF bottomRightPoint = calculatePoint(bottomCenterPint, bigRadius ,fishAngle - 90);
-        PointF upperLeftPoint = calculatePoint(upperCenterPoint, smallRadius ,fishAngle + 90);
-        PointF upperRightPoint = calculatePoint(upperCenterPoint, smallRadius ,fishAngle - 90);
+        PointF bottomLeftPoint = calculatePoint(bottomCenterPint, bigRadius ,segmentAngle + 90);
+        PointF bottomRightPoint = calculatePoint(bottomCenterPint, bigRadius ,segmentAngle - 90);
+        PointF upperLeftPoint = calculatePoint(upperCenterPoint, smallRadius ,segmentAngle + 90);
+        PointF upperRightPoint = calculatePoint(upperCenterPoint, smallRadius ,segmentAngle - 90);
 
         if (hasBigCircle){
             //绘制大圆
@@ -182,6 +198,8 @@ public class FishDrawable extends Drawable {
         mPath.lineTo(upperRightPoint.x,upperRightPoint.y);
         mPath.lineTo(bottomRightPoint.x,bottomRightPoint.y);
         canvas.drawPath(mPath,mPaint);
+
+        return upperCenterPoint;
     }
 
     /**
